@@ -1,5 +1,6 @@
 #include <iostream>
 #include <windows.h>
+#include <conio.h>
 
 bool isShiftPressed()
 {
@@ -26,23 +27,31 @@ LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
         {
             wchar_t key = buffer[0];
 
-            // Handle upper/lower case correctly based on Shift and Caps Lock
-            bool shiftPressed = isShiftPressed();
-            bool capsLockActive = isCapsLockActive();
-
-            if (isalpha(key))
+            // Handle the Enter key for new lines
+            if (p->vkCode == VK_RETURN)
             {
-                if (shiftPressed != capsLockActive)  // XOR to check if one is active but not both
-                {
-                    key = towupper(key);
-                }
-                else
-                {
-                    key = towlower(key);
-                }
+                std::wcout << std::endl;
             }
+            else
+            {
+                // Handle upper/lower case correctly based on Shift and Caps Lock
+                bool shiftPressed = isShiftPressed();
+                bool capsLockActive = isCapsLockActive();
 
-            std::wcout << key;
+                if (isalpha(key))
+                {
+                    if (shiftPressed != capsLockActive)  // XOR to check if one is active but not both
+                    {
+                        key = towupper(key);
+                    }
+                    else
+                    {
+                        key = towlower(key);
+                    }
+                }
+
+                std::wcout << key;
+            }
         }
     }
     return CallNextHookEx(NULL, nCode, wParam, lParam);
