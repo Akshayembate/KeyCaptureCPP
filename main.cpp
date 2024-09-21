@@ -1,36 +1,48 @@
 #include <iostream>
 #include <windows.h>
 
-// Function to convert virtual key code to character
-char getCharFromKey(KBDLLHOOKSTRUCT* p)
+bool isShiftPressed()
 {
-    BYTE keyboardState[256];
-    GetKeyboardState(keyboardState);
-
-    // Check for shift and caps lock
-    if (GetKeyState(VK_CAPITAL) & 0x0001) // Caps Lock is on
-    {
-        keyboardState[VK_SHIFT] = 0x80; // Simulate holding shift
-    }
-
-    // Prepare for the actual character conversion
-    WORD charCode;
-    ToAscii(p->vkCode, p->scanCode, keyboardState, &charCode, 0);
-    
-    return (char)charCode;
+    return (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 }
 
-// Callback function for keyboard hook
+bool isCapsLockActive()
+{
+    return (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
+}
+
 LRESULT CALLBACK keyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
-    if (nCode >= 0)
+    if (nCode >= 0 && wParam == WM_KEYDOWN)
     {
-        if (wParam == WM_KEYDOWN)
+        KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
+        BYTE keyboardState[256];
+        GetKeyboardState(keyboardState);
+
+        wchar_t buffer[5] = {0};
+        int result = ToUnicode(p->vkCode, p->scanCode, keyboardState, buffer, 4, 0);
+
+        if (result > 0)
         {
-            // If a key is pressed
-            KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
-            char key = getCharFromKey(p);
-            std::cout << key;
+            wchar_t key = buffer[0];
+
+            // Handle upper/lower case correctly based on Shift and Caps Lock
+            bool shiftPressed = isShiftPressed();
+            bool capsLockActive = isCapsLockActive();
+
+            if (isalpha(key))
+            {
+                if (shiftPressed != capsLockActive)  // XOR to check if one is active but not both
+                {
+                    key = towupper(key);
+                }
+                else
+                {
+                    key = towlower(key);
+                }
+            }
+
+            std::wcout << key;
         }
     }
     return CallNextHookEx(NULL, nCode, wParam, lParam);
